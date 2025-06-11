@@ -14,10 +14,7 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
-    #transaksi_list = db.relationship('Transaksi', backref='user_ref', lazy=True)
     transaksi_list = db.relationship('Transaksi', back_populates='user', lazy=True)
-
-    #transaksi_layanan_list = db.relationship('TransaksiLayanan', backref='user_ref', lazy=True)
     
     def set_password(self, password):
         self.password = generate_password_hash(password)

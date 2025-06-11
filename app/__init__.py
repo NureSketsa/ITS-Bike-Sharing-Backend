@@ -24,13 +24,13 @@ def create_app(config_name='default'):
     from app.routes.kendaraan import kendaraan_bp
     from app.routes.stasiun import stasiun_bp
     from app.routes.transaksi import transaksi_bp
-    from app.routes.layanan import layanan_bp
+    #from app.routes.layanan import layanan_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(kendaraan_bp, url_prefix='/api/kendaraan')
     app.register_blueprint(stasiun_bp, url_prefix='/api/stasiun')
     app.register_blueprint(transaksi_bp, url_prefix='/api/transaksi')
-    app.register_blueprint(layanan_bp, url_prefix='/api/layanan')
+    #app.register_blueprint(layanan_bp, url_prefix='/api/layanan')
 
     # # --- TAMBAHKAN BLOK KODE INI ---
     # print("\n=== DAFTAR SEMUA RUTE YANG TERDAFTAR ===")
