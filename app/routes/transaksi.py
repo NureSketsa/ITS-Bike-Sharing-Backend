@@ -67,12 +67,18 @@ def rent_bike():
         if not stasiun:
             return jsonify({'error': 'Station not found'}), 404
         
+        deposit_dipegang = data.get('deposit_dipegang', 0)
+        
+        # Create transaction
         transaksi = Transaksi(
             user_nrp=user.nrp,
             kendaraan_id=kendaraan_id,
             stasiun_ambil_id=stasiun_ambil_id,
             waktu_mulai=datetime.utcnow(),
             status_transaksi='ONGOING',
+            # total_biaya akan dihitung saat pengembalian
+            total_biaya=0, 
+            deposit_dipegang=float(deposit_dipegang), # Ambil dari form
             payment_gateway_ref=str(uuid.uuid4())
         )
         
