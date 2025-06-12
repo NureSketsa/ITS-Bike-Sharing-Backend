@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
 from app.models.kendaraan import Kendaraan, LogLaporan  # FIXED: Import LogLaporan instead of LogPemeliharaan
 from app.models.user import User
+from app.models.stasiun import Stasiun
 
 kendaraan_bp = Blueprint('kendaraan', __name__)
 
@@ -13,20 +14,35 @@ def get_all_kendaraan():
     per_page = request.args.get('per_page', 20, type=int)
     status = request.args.get('status')
     stasiun_id = request.args.get('stasiun_id', type=int)
-    
-    query = Kendaraan.query
+
+    # =======================================================================
+    # Querry Join: mengambil data kendaraan beserta nama stasiun
+    query = db.session.query(
+        Kendaraan, 
+        Stasiun.nama_stasiun.label('stasiun_nama')
+    ).join(Stasiun, Kendaraan.stasiun_id == Stasiun.stasiun_id, isouter=True)
+    # Nure
+    # =======================================================================
     
     if status:
         query = query.filter(Kendaraan.status == status)
     if stasiun_id:
         query = query.filter(Kendaraan.stasiun_id == stasiun_id)
+
     
+
     kendaraan_list = query.paginate(
         page=page, per_page=per_page, error_out=False
     )
+
+    results = []
+    for kendaraan_obj, stasiun_nama in kendaraan_list.items:
+        kendaraan_dict = kendaraan_obj.to_dict()
+        kendaraan_dict['stasiun_nama'] = stasiun_nama
+        results.append(kendaraan_dict)
     
     return jsonify({
-        'kendaraan': [k.to_dict() for k in kendaraan_list.items],
+        'kendaraan': results,
         'total': kendaraan_list.total,
         'pages': kendaraan_list.pages,
         'current_page': page

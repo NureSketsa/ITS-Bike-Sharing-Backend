@@ -2,12 +2,15 @@
 
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, verify_jwt_in_request
+from sqlalchemy.orm import aliased
 from app import db
 from app.models.transaksi import Transaksi
 from app.models.kendaraan import Kendaraan
 from app.models.stasiun import Stasiun
 from app.models.user import User
 from app.models.layanan import Layanan, TransaksiLayanan
+from app.models.stasiun import Stasiun
+from app.models.kendaraan import Kendaraan
 from datetime import datetime
 import uuid
 import logging
@@ -188,27 +191,58 @@ def get_active_rentals():
         
     except Exception as e:
         return handle_error(e, "Failed to get active rentals")
-
 @transaksi_bp.route('/my-rentals', methods=['GET'])
 @jwt_required()
 def get_my_rentals():
-    """Get current user's rental history"""
+    """Get current user's rental history with station and bike names"""
     try:
         user, error_response, status_code = get_current_user()
         if error_response:
             return error_response, status_code
-            
-        query = Transaksi.query.filter_by(user_nrp=user.nrp).order_by(Transaksi.waktu_mulai.desc())
+
+        PickupStation = aliased(Stasiun, name='pickup_station')
+        ReturnStation = aliased(Stasiun, name='return_station')
+
+        # =======================================================================
+        # Querry Join: Transaksi, PickupStation, ReturnStation, Kendaraan
+        query = db.session.query(
+            Transaksi,
+            PickupStation.nama_stasiun.label('nama_stasiun_ambil'),
+            ReturnStation.nama_stasiun.label('nama_stasiun_kembali'),
+            Kendaraan.merk.label('merk_kendaraan')
+        ).join(
+            PickupStation, Transaksi.stasiun_ambil_id == PickupStation.stasiun_id, isouter=True
+        ).join(
+            ReturnStation, Transaksi.stasiun_kembali_id == ReturnStation.stasiun_id, isouter=True
+        ).join(
+            Kendaraan, Transaksi.kendaraan_id == Kendaraan.kendaraan_id, isouter=True 
+        ).filter(
+            Transaksi.user_nrp == user.nrp
+        ).order_by(
+            Transaksi.waktu_mulai.desc()
+        )
+        # Nure
+        # =======================================================================
+
         
-        rentals = query.all()
+        rentals_with_details = query.all()
         
+        results = []
+        for rental_obj, pickup_name, return_name, bike_brand in rentals_with_details:
+            rental_dict = rental_obj.to_dict()
+            rental_dict['nama_stasiun_ambil'] = pickup_name
+            rental_dict['nama_stasiun_kembali'] = return_name
+            rental_dict['merk_kendaraan'] = bike_brand
+            results.append(rental_dict)
+
         return jsonify({
             'success': True,
-            'data': [r.to_dict() for r in rentals]
+            'data': results 
         })
         
     except Exception as e:
         return handle_error(e, "Failed to get rental history")
+
 
 # This route is optional, you can add it back if needed for admins
 @transaksi_bp.route('/', methods=['GET'])
