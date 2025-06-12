@@ -242,3 +242,78 @@ def get_all_transactions_for_admin():
         })
     except Exception as e:
         return handle_error(e, "Failed to get all transactions")
+    
+# app/routes/transaksi.py
+
+# ==================== TAMBAHKAN FUNGSI BARU INI ====================# app/routes/transaksi.py
+
+# ==================== GANTI FUNGSI LAMA DENGAN YANG INI ====================
+@transaksi_bp.route('/add-service', methods=['POST'])
+@jwt_required()
+def add_service_to_transaction():
+    """Adds a new service to an existing transaction."""
+    
+    # Dapatkan user yang sedang login
+    user, error_response, status_code = get_current_user()
+    if error_response:
+        return error_response, status_code
+
+    data = request.get_json()
+    if not data:
+        logger.warning("Add service failed: No data provided.")
+        return jsonify({'error': 'No data provided'}), 400
+
+    transaksi_id = data.get('transaksi_id')
+    layanan_id = data.get('layanan_id')
+
+    if not transaksi_id or not layanan_id:
+        logger.warning(f"Add service failed: Missing ID. Transaksi: {transaksi_id}, Layanan: {layanan_id}")
+        return jsonify({'error': 'transaksi_id and layanan_id are required'}), 400
+
+    try:
+        logger.debug(f"Attempting to add service {layanan_id} to transaction {transaksi_id} for user {user.nrp}")
+
+        # 1. Verifikasi bahwa transaksi ini milik user yang sedang login dan sedang berlangsung
+        transaksi = Transaksi.query.filter_by(
+            transaksi_id=transaksi_id, 
+            user_nrp=user.nrp,
+            status_transaksi='ONGOING' # Mungkin hanya bisa tambah layanan pada transaksi aktif
+        ).first()
+        if not transaksi:
+            logger.warning(f"Add service failed: Active transaction {transaksi_id} not found for user {user.nrp}")
+            return jsonify({'error': 'Active transaction not found or does not belong to user'}), 404
+        
+        # 2. Verifikasi bahwa layanan yang dipilih ada dan aktif
+        layanan = Layanan.query.filter_by(layanan_id=layanan_id, status=True).first()
+        if not layanan:
+            logger.warning(f"Add service failed: Service ID {layanan_id} not found or is not active")
+            return jsonify({'error': 'Service not found or is not active'}), 404
+
+        # 3. Buat hubungan antara transaksi dan layanan
+        new_transaksi_layanan = TransaksiLayanan(
+            transaksi_id=transaksi.transaksi_id,
+            layanan_id=layanan.layanan_id
+        )
+        db.session.add(new_transaksi_layanan)
+        logger.debug("TransaksiLayanan object created and added to session.")
+
+        # 4. Update total biaya transaksi dengan aman
+        # Ubah nilai None menjadi 0 sebelum melakukan penambahan
+        current_cost = float(transaksi.total_biaya or 0)
+        service_cost = float(layanan.biaya_dasar or 0)
+        
+        transaksi.total_biaya = current_cost + service_cost
+        logger.debug(f"Updating total_biaya for transaction {transaksi.transaksi_id}: {current_cost} + {service_cost} = {transaksi.total_biaya}")
+
+        db.session.commit()
+        logger.info(f"Successfully added service {layanan_id} to transaction {transaksi_id}")
+
+        return jsonify({
+            'success': True,
+            'message': f"Service '{layanan.nama_layanan}' added to transaction {transaksi.transaksi_id}"
+        }), 200
+
+    except Exception as e:
+        # Gunakan helper error yang sudah ada
+        return handle_error(e, "Failed to add service to transaction")
+# =======================================================================

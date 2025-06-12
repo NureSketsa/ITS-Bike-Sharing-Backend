@@ -132,24 +132,26 @@ def get_laporan_logs(kendaraan_id):
         'current_page': page
     }), 200
 
+# routes/kendaraan.py
+
 @kendaraan_bp.route('/<int:kendaraan_id>/laporan', methods=['POST'])
 @jwt_required()
 def create_laporan_log(kendaraan_id):
+    # 1. Mendapatkan data user
     current_user_nrp = get_jwt_identity()
     user = User.query.filter_by(nrp=current_user_nrp).first()
-    
     if not user:
         return jsonify({'message': 'User not found'}), 404
     
-    # Check if kendaraan exists
+    # 2. Mendapatkan data kendaraan
     kendaraan = Kendaraan.query.get_or_404(kendaraan_id)
     
+    # 3. Mendapatkan data dari request body
     data = request.get_json()
-    
     if not data.get('laporan'):
         return jsonify({'message': 'Laporan field is required'}), 400
     
-    # FIXED: Create LogLaporan with correct fields
+    # 4. Membuat objek LogLaporan baru
     log = LogLaporan(
         kendaraan_id=kendaraan_id,
         nrp=current_user_nrp,
@@ -157,8 +159,9 @@ def create_laporan_log(kendaraan_id):
         status=data.get('status', 'Dilaporkan')
     )
     
+    # 5. Menyimpan ke database
     db.session.add(log)
-    db.session.commit()
+    db.session.commit() # <-- KEMUNGKINAN BESAR CRASH TERJADI DI SINI
     
     return jsonify({
         'message': 'Laporan created successfully',

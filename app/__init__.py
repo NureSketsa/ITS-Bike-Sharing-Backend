@@ -1,3 +1,5 @@
+# app/__init__.py (FIXED)
+
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -13,10 +15,10 @@ def create_app(config_name='default'):
     app = Flask(__name__)
     app.config.from_object(config[config_name])
     
-    # Initialize extensions
+    # Initialize 
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
     db.init_app(app)
     migrate.init_app(app, db)
-    CORS(app)
     jwt.init_app(app)
     
     # Register blueprints
@@ -24,20 +26,12 @@ def create_app(config_name='default'):
     from app.routes.kendaraan import kendaraan_bp
     from app.routes.stasiun import stasiun_bp
     from app.routes.transaksi import transaksi_bp
-    #from app.routes.layanan import layanan_bp
+    from app.routes.layanan import layanan_bp # <--- FIX: Hapus tanda #
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(kendaraan_bp, url_prefix='/api/kendaraan')
     app.register_blueprint(stasiun_bp, url_prefix='/api/stasiun')
     app.register_blueprint(transaksi_bp, url_prefix='/api/transaksi')
-    #app.register_blueprint(layanan_bp, url_prefix='/api/layanan')
+    app.register_blueprint(layanan_bp, url_prefix='/api/layanan') # <--- FIX: Hapus tanda #
 
-    # # --- TAMBAHKAN BLOK KODE INI ---
-    # print("\n=== DAFTAR SEMUA RUTE YANG TERDAFTAR ===")
-    # for rule in app.url_map.iter_rules():
-    #     print(f"Endpoint: {rule.endpoint}, Methods: {list(rule.methods)}, URL: {rule.rule}")
-    # print("=======================================\n")
-    # --------------------------------
-
-    
     return app

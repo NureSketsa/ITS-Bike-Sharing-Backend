@@ -7,7 +7,7 @@ from .layanan import Layanan, TransaksiLayanan
 __all__ = [
     'User',
     'Kendaraan',
-    'LogLaporan',  # FIXED: Use LogLaporan instead of LogLaporan (was inconsistent)
+    'LogLaporan',  
     'Stasiun',
     'Transaksi',
     'Layanan',
